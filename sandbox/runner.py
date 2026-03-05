@@ -8,18 +8,19 @@ import modal
 
 app = modal.App("trading-battleground")
 
-image = modal.Image.debian_slim().pip_install([
-    "pandas",
-    "numpy",
-    "scipy",
-    "scikit-learn",
-    "statsmodels",
-    "ta",
-    "optuna",
-])
-
-# Mount the core backtester and optimizer into the container
-core_mount = modal.Mount.from_local_dir("core", remote_path="/root/core")
+image = (
+    modal.Image.debian_slim()
+    .pip_install([
+        "pandas",
+        "numpy",
+        "scipy",
+        "scikit-learn",
+        "statsmodels",
+        "ta",
+        "optuna",
+    ])
+    .add_local_dir("core", remote_path="/root/core")
+)
 
 
 @app.function(
@@ -27,7 +28,6 @@ core_mount = modal.Mount.from_local_dir("core", remote_path="/root/core")
     timeout=300,        # 5 min max per backtest
     memory=512,         # 512MB container
     cpu=1.0,
-    mounts=[core_mount],
 )
 def run_backtest_sandboxed(payload: dict) -> dict:
     """
@@ -87,7 +87,6 @@ def run_backtest_sandboxed(payload: dict) -> dict:
     timeout=300,
     memory=512,
     cpu=1.0,
-    mounts=[core_mount],
 )
 def optimize_sandboxed(payload: dict) -> dict:
     """
