@@ -40,16 +40,18 @@ export async function POST(request: NextRequest) {
   // Save strategy if not provided
   let strategyId = strategy_id;
   if (!strategyId) {
+    const strategyRow: Record<string, unknown> = {
+      name: name || "Untitled Strategy",
+      description: description || "",
+      code,
+      parameters: parameters || {},
+      selected_assets,
+    };
+    if (userId) strategyRow.user_id = userId;
+
     const { data: strategy, error: stratError } = await supabase
       .from("strategies")
-      .insert({
-        user_id: userId || "anonymous",
-        name: name || "Untitled Strategy",
-        description: description || "",
-        code,
-        parameters: parameters || {},
-        selected_assets,
-      })
+      .insert(strategyRow)
       .select()
       .single();
 
