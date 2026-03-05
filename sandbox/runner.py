@@ -5,7 +5,7 @@ Wraps the backtester in an isolated Modal container for safe execution.
 """
 
 import modal
-from modal import web_endpoint
+from modal import fastapi_endpoint
 
 app = modal.App("trading-battleground")
 
@@ -19,6 +19,7 @@ image = (
         "statsmodels",
         "ta",
         "optuna",
+        "fastapi[standard]",
     ])
     .add_local_dir("core", remote_path="/root/core")
 )
@@ -89,7 +90,7 @@ def run_backtest_sandboxed(payload: dict) -> dict:
     memory=512,
     cpu=1.0,
 )
-@web_endpoint(method="POST")
+@fastapi_endpoint(method="POST")
 def run_backtest_web(payload: dict) -> dict:
     """HTTP POST endpoint that delegates to run_backtest_sandboxed."""
     return run_backtest_sandboxed.local(payload)
