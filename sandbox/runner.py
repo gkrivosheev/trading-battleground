@@ -5,6 +5,7 @@ Wraps the backtester in an isolated Modal container for safe execution.
 """
 
 import modal
+from modal import web_endpoint
 
 app = modal.App("trading-battleground")
 
@@ -80,6 +81,18 @@ def run_backtest_sandboxed(payload: dict) -> dict:
             "equity_curve": [],
             "signals": [],
         }
+
+
+@app.function(
+    image=image,
+    timeout=300,
+    memory=512,
+    cpu=1.0,
+)
+@web_endpoint(method="POST")
+def run_backtest_web(payload: dict) -> dict:
+    """HTTP POST endpoint that delegates to run_backtest_sandboxed."""
+    return run_backtest_sandboxed.local(payload)
 
 
 @app.function(
