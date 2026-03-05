@@ -1,24 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { execSync } from "child_process";
 import { createServerClient } from "@/lib/supabase";
-
-// Extend serverless function lifetime for background work
-function waitUntil(promise: Promise<unknown>) {
-  try {
-    // Vercel serverless waitUntil (Next.js 14 compatible)
-    const ctx = (globalThis as Record<symbol, { get?: () => { waitUntil?: (p: Promise<unknown>) => void } }>)[
-      Symbol.for("vercel-request-context")
-    ];
-    const reqCtx = ctx?.get?.();
-    if (reqCtx?.waitUntil) {
-      reqCtx.waitUntil(promise);
-      return true;
-    }
-  } catch {
-    // Not on Vercel
-  }
-  return false;
-}
+import { waitUntil } from "@vercel/functions";
 
 export async function POST(request: NextRequest) {
   const supabase = createServerClient();
@@ -138,11 +121,8 @@ export async function POST(request: NextRequest) {
     console.error("Modal trigger failed:", err);
   });
 
-  // Keep serverless function alive until backtest completes
-  if (!waitUntil(backtestPromise)) {
-    // Not on Vercel — await to ensure completion
-    await backtestPromise;
-  }
+  // Keep serverless function alive after response is sent
+  waitUntil(backtestPromise);
 
   return NextResponse.json({ backtest_id: backtest.id }, { status: 201 });
 }
