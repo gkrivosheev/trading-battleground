@@ -199,8 +199,10 @@ def build_parameters(param_schema: dict, overrides: dict) -> SimpleNamespace:
     """
     params = {}
     for name, spec in param_schema.items():
-        if name in overrides:
-            params[name] = overrides[name]
+        override = overrides.get(name)
+        if override is not None and not isinstance(override, dict):
+            # Use scalar override (e.g. from Optuna)
+            params[name] = override
         else:
             # Default to midpoint
             low = spec.get("low", 0)
