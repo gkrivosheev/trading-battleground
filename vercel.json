@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "src/app/api/cron/fetch-data/route.ts": {
+      "maxDuration": 300
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/fetch-data",
