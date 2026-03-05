@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { getSupabase } from "@/lib/supabase";
 
 interface LeaderboardEntry {
   id: string;
@@ -25,6 +26,8 @@ const ASSET_CLASSES = [
   { value: "fx", label: "FX" },
 ];
 
+const PAGE_SIZE = 20;
+
 export default function LeaderboardPage() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,15 +38,55 @@ export default function LeaderboardPage() {
     async function fetchLeaderboard() {
       setLoading(true);
       try {
-        const params = new URLSearchParams({
-          page: String(page),
-          limit: "20",
-        });
-        if (assetClass) params.set("asset_class", assetClass);
+        const supabase = getSupabase();
+        const offset = (page - 1) * PAGE_SIZE;
 
-        const res = await fetch(`/api/leaderboard?${params}`);
-        const json = await res.json();
-        setEntries(json.data || []);
+        const query = supabase
+          .from("backtest_results")
+          .select(`
+            id,
+            sharpe_ratio,
+            total_pnl,
+            max_drawdown,
+            win_rate,
+            train_sharpe,
+            created_at,
+            strategies (
+              name,
+              selected_assets,
+              user_id
+            )
+          `)
+          .eq("status", "complete")
+          .not("sharpe_ratio", "is", null)
+          .order("sharpe_ratio", { ascending: false })
+          .range(offset, offset + PAGE_SIZE - 1);
+
+        const { data, error } = await query;
+
+        if (error) {
+          console.error("Supabase error:", error);
+          setEntries([]);
+          return;
+        }
+
+        let filtered = (data || []) as unknown as LeaderboardEntry[];
+
+        // Client-side asset class filter
+        if (assetClass) {
+          const { data: assets } = await supabase
+            .from("assets")
+            .select("ticker")
+            .eq("asset_class", assetClass);
+
+          const tickers = new Set((assets || []).map((a: { ticker: string }) => a.ticker));
+          filtered = filtered.filter((row) => {
+            const selected = row.strategies?.selected_assets || [];
+            return selected.some((t) => tickers.has(t));
+          });
+        }
+
+        setEntries(filtered);
       } catch (err) {
         console.error("Failed to fetch leaderboard:", err);
       } finally {
