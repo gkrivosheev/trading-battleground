@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
       for (let i = 0; i < rows.length; i += 500) {
         const batch = rows.slice(i, i + 500);
         const { error } = await supabase
-          .table("market_data")
+          .from("market_data")
           .upsert(batch, { onConflict: "ticker,date" });
         if (error) throw error;
       }
