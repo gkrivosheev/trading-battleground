@@ -5,19 +5,15 @@ import { createServerClient } from "@/lib/supabase";
 export async function POST(request: NextRequest) {
   const supabase = createServerClient();
 
+  // Try to authenticate user (optional for now)
+  let userId: string | null = null;
   const authHeader = request.headers.get("authorization");
-  if (!authHeader) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const token = authHeader.replace("Bearer ", "");
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser(token);
-
-  if (authError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (authHeader) {
+    const token = authHeader.replace("Bearer ", "");
+    if (token) {
+      const { data: { user } } = await supabase.auth.getUser(token);
+      userId = user?.id ?? null;
+    }
   }
 
   const body = await request.json();
@@ -47,7 +43,7 @@ export async function POST(request: NextRequest) {
     const { data: strategy, error: stratError } = await supabase
       .from("strategies")
       .insert({
-        user_id: user.id,
+        user_id: userId || "anonymous",
         name: name || "Untitled Strategy",
         description: description || "",
         code,
